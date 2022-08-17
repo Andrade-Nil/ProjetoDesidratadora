@@ -13,6 +13,9 @@ const char* password = "12121212";  //Enter Password here
 
 ESP8266WebServer server(80);
 
+uint8_t RELEpin = D7;
+bool RELEstatus = LOW;
+
 // DHT Sensor
 uint8_t DHTPin = 12; 
                
@@ -26,6 +29,7 @@ void setup() {
   
   Serial.printf("testando ");
   Serial.begin(115200);
+  pinMode(RELEpin, OUTPUT);
   delay(100);
   pinMode(DHTPin, INPUT);
   pinMode(0, OUTPUT);
@@ -40,7 +44,7 @@ void setup() {
 
   //verificar wi-fi está conectado à rede wi-fi
   while (WiFi.status() != WL_CONNECTED) {
-  delay(1000);
+  delay(100);
   Serial.print(".");
   }
   Serial.println("");
@@ -49,6 +53,8 @@ void setup() {
   Serial.println(WiFi.localIP());
 
   server.on("/", handle_OnConnect);
+  server.on("/led1on", handle_releon);
+  server.on("/led1off", handle_releoff);
   server.onNotFound(handle_NotFound);
 
   server.begin();
@@ -58,34 +64,54 @@ void setup() {
 void loop() {
   
   server.handleClient();
+  if(RELEstatus)
+  {digitalWrite(RELEpin, HIGH);}
+  else
+  {digitalWrite(RELEpin, LOW);}
   
 }
 
 void handle_OnConnect() {
-
- Temperature = dht.readTemperature(); // Obtém os valores da temperatura
+  RELEstatus = LOW;
+  Temperature = dht.readTemperature(); // Obtém os valores da temperatura
   Humidity = dht.readHumidity(); // Obtém os valores da umidade
-  server.send(200, "text/html", SendHTML(Temperature,Humidity));
+  Serial.println("GPIO7 Status: OFF | GPIO6 Status: OFF");
+  server.send(200, "text/html", SendHTML(Temperature,Humidity,RELEstatus));
+}
+
+void handle_releon() {
+  RELEstatus = HIGH;
+  Serial.println("GPIO7 Status: ON");
+  server.send(200, "text/html", SendHTML(Temperature,Humidity,true)); 
+}
+
+void handle_releoff() {
+  RELEstatus = LOW;
+  Serial.println("GPIO7 Status: OFF");
+  server.send(200, "text/html", SendHTML(Temperature,Humidity,false)); 
 }
 
 void handle_NotFound(){
   server.send(404, "text/plain", "Not found");
 }
 
-String SendHTML(float Temperaturestat,float Humiditystat){
+String SendHTML(float Temperaturestat,float Humiditystat,uint8_t relestat){
   String ptr = "<!DOCTYPE html> <html>\n";
   ptr +="<head><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n";
   ptr +="<title>ESP8266 Weather Report</title>\n";
   ptr +="<link rel='stylesheet' href='style.css'>";
   ptr +="<style>html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center;}\n";
-  ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;}\n";
-  ptr +="p {font-size: 24px;color: #444444;margin-bottom: 10px;}\n";
+  ptr +="body{margin-top: 50px;} h1 {color: #444444;margin: 50px auto 30px;} h3 {color: #444444;margin-bottom: 50px;}\n";
+  ptr +=".button {display: block;width: 80px;background-color: #1abc9c;border: none;color: white;padding: 13px 30px;text-decoration: none;font-size: 25px;margin: 0px auto 35px;cursor: pointer;border-radius: 4px;}\n";
+  ptr +=".button-on {background-color: #1abc9c;}\n";
+  ptr +=".button-on:active {background-color: #16a085;}\n";
+  ptr +=".button-off {background-color: #34495e;}\n";
+  ptr +=".button-off:active {background-color: #2c3e50;}\n";
+  ptr +="p {font-size: 14px;color: #888;margin-bottom: 10px;}\n";
   ptr +="</style>\n";
   ptr +="</head>\n";
   ptr +="<body>\n";
-  ptr +="<div id=\"webpage\">\n";
-  ptr +="<h1>ESP8266 NodeMCU Weather Report</h1>\n";
-  //
+  ptr +="<h1>ESP8266 NodeMCU Dehydrator</h1>\n";
   ptr +="<p>Temperatura: ";
   ptr +=(float)Temperaturestat;
   ptr +="°C</p>";
@@ -93,13 +119,11 @@ String SendHTML(float Temperaturestat,float Humiditystat){
   ptr +=(float)Humiditystat;
   ptr +="%</p>";
   
-  ptr +="</div>\n";
+  if(relestat)
+  {ptr +="<p>LED1 Status: ON</p><a class=\"button button-off\" href=\"/led1off\">OFF</a>\n";}
+  else
+  {ptr +="<p>LED1 Status: OFF</p><a class=\"button button-on\" href=\"/led1on\">ON</a>\n";}
 
-  ptr +="<label class='switch'>";
-  ptr +="<input type='checkbox' checked>";
-  ptr +="<span class='slider round'></span>";
-  ptr +="</label>";
-  
   ptr +="</body>\n";
 
 //  ptr +="<script>";
