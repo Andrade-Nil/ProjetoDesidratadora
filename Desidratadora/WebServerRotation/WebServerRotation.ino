@@ -128,10 +128,20 @@
 
 // Load Wi-Fi library
 #include <ESP8266WiFi.h>
+#include "DHT.h"
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+
+// DHT Sensor
+uint8_t DHTPin = 12;
+// Initialize DHT sensor.
+DHT dht(DHTPin, DHTTYPE);
+
+float Temperatura = 0.0;
+float Humidade = 0.0;
 
 // Replace with your network credentials
-const char* ssid     = "ANDERSON";
-const char* password = "123123123";
+const char* ssid     = "LUIZ";
+const char* password = "12341234";
 
 // Set web server port number to 80
 WiFiServer server(80);
@@ -160,6 +170,7 @@ void setup() {
   // Initialize the output variables as outputs
   pinMode(output5, OUTPUT);
   pinMode(output4, OUTPUT);
+  pinMode(DHTPin, INPUT);
   // Set outputs to LOW
   digitalWrite(output5, LOW);
   digitalWrite(output4, LOW);
@@ -210,6 +221,8 @@ void loop(){
               Serial.println("GPIO 5 on");
               output5State = "on";
               digitalWrite(output5, HIGH);
+              Temperatura = dht.readTemperature(); // Obtém os valores da temperatura
+              Humidade = dht.readHumidity(); // Obtém os valores da umidade
             } else if (header.indexOf("GET /?tipo=2") >= 0) {
               Serial.println("GPIO 5 on");
               output5State = "on";
@@ -264,12 +277,13 @@ void loop(){
   client.println("<input type=\"radio\" value=\"4\" name=\"tipo\">");
   client.println("<span>LEGUMES RAPIDO</span><br><br><br>");
   if (output5State=="off") {
-              client.println("<p><a href=\"/on\"><button class=\"button\">ON</button></a></p>");
+              client.println("<p><a href=\"/on\"><button type=\"submit\" class=\"button\">ON</button></a></p>");
             } else {
-              client.println("<p><a href=\"/off\"><button class=\"button button2\">OFF</button></a></p>");
+              client.println("<p><a href=\"/off\"><button type=\"submit\" class=\"button button2\">OFF</button></a></p>");
             }
-  client.println("</div>");
-            
+  client.println("</form>");
+//            client.println("<p>"+(char(Temperatura))+"</p>");
+//            client.println("<p>"+(char(Humidade+))"</p>");
             // Display current state, and ON/OFF buttons for GPIO 5  
 //            client.println("<p>GPIO 5 - State " + output5State + "</p>");
 //            // If the output5State is off, it displays the ON button       
